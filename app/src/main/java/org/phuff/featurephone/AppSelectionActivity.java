@@ -14,6 +14,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 
@@ -38,6 +40,13 @@ public class AppSelectionActivity extends Activity {
             app.icon = ri.activityInfo.loadIcon(manager);
             apps.add(app);
         }
+        Collections.sort(apps, new Comparator<AppDetails>() {
+
+            @Override
+            public int compare(AppDetails lhs, AppDetails rhs) {
+                return lhs.label.toString().compareTo(rhs.label.toString());
+            }
+        });
     }
 
     private void loadListView(){
@@ -69,13 +78,18 @@ public class AppSelectionActivity extends Activity {
                 LauncherState state = StateHelper.getState(getApplicationContext());
                 String name = apps.get(pos).name.toString();
                 if(!state.appTilesMap.containsKey(name)) {
-                    state.appTilesMap.put(name, true);
+
                     AppTile newAppTile = new AppTile();
                     newAppTile.name = name;
-                    newAppTile.order = state.appTiles.size();
-                    state.appTiles.add(newAppTile);
+                    newAppTile.order = state.appTilesMap.size();
+                    state.appTilesMap.put(name, newAppTile);
                     StateHelper.setState(state, getApplicationContext());
                 }
+                Intent reloadIntent = new Intent();
+                reloadIntent.setAction(LauncherActivity.ACTION_RELOAD_LAUNCHER_LIST);
+                reloadIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(reloadIntent);
+                finish();
             }
         });
     }

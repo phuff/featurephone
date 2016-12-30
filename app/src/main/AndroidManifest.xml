@@ -18,6 +18,7 @@
 
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <action android:name="org.phuff.featurephone.RELOAD_LAUNCHER_LIST" />
             </intent-filter>
         </activity>
         <activity

@@ -12,29 +12,40 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.ListPopupWindow;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 
 public class LauncherActivity extends Activity {
     // Todo: read from storage the list of things
     // Display them
     private GridView grid;
+    public static final String ACTION_RELOAD_LAUNCHER_LIST = "org.phuff.featurephone.RELOAD_LAUNCHER_LIST";
+    private ListPopupWindow mListPopupWindow;
 
-    private void loadGridView(){
+    private void loadListView(ListPopupWindow listPopupWindow){
         PackageManager manager = getPackageManager();
-        grid = (GridView)findViewById(R.id.gridview);
         final LauncherState state = StateHelper.getState(getApplication());
-        final ArrayList<AppDetails> appDetails = new ArrayList<AppDetails>();
-        for(AppTile appTile : state.appTiles) {
+        final ArrayList<AppDetails> appDetailsList = new ArrayList<AppDetails>();
+        final ArrayList<AppTile> sortedAppTiles = new ArrayList<AppTile>(state.appTilesMap.values());
+        Collections.sort(sortedAppTiles, new Comparator<AppTile>() {
+            @Override
+            public int compare(AppTile lhs, AppTile rhs) {
+                return lhs.order < rhs.order ? 1 : -1;
+            }
+        });
+        for(AppTile appTile : sortedAppTiles) {
             try {
                 ApplicationInfo info = manager.getApplicationInfo(appTile.name, 0);
                 AppDetails details = new AppDetails();
-                details.label = info.name;
+                details.label = manager.getApplicationLabel(info);
                 details.icon = info.loadIcon(manager);
                 details.name = info.packageName;
-                appDetails.add(details);
+                appDetailsList.add(details);
             } catch (PackageManager.NameNotFoundException e) {
                 continue;
             }
@@ -42,7 +53,7 @@ public class LauncherActivity extends Activity {
         }
         ArrayAdapter<AppDetails> adapter = new ArrayAdapter<AppDetails>(this,
                 R.layout.app_list_item,
-                appDetails) {
+                appDetailsList) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 if(convertView == null){
@@ -50,22 +61,46 @@ public class LauncherActivity extends Activity {
                 }
 
                 ImageView appIcon = (ImageView)convertView.findViewById(R.id.item_app_icon);
-                appIcon.setImageDrawable(appDetails.get(position).icon);
+                appIcon.setImageDrawable(appDetailsList.get(position).icon);
 
                 TextView appLabel = (TextView)convertView.findViewById(R.id.item_app_label);
-                appLabel.setText(appDetails.get(position).label);
-
+                appLabel.setText(appDetailsList.get(position).label);
                 return convertView;
             }
         };
 
-        grid.setAdapter(adapter);
-        grid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        listPopupWindow.setAdapter(adapter);
+        listPopupWindow.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> av, View v, int pos, long id) {
-                // do nothing for now
+                AppDetails ad = appDetailsList.get(pos);
+                Intent i = getPackageManager().getLaunchIntentForPackage(ad.name.toString());
+                startActivity(i);
             }
         });
+        /*listPopupWindow.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> av, View v, int pos, long id) {
+                final AppDetails ad = appDetails.get(pos);
+                new AlertDialog.Builder(LauncherActivity.this)
+                        .setTitle("Remove " + ad.label.toString() + "?")
+                        .setMessage("Do you really want to remove " + ad.label.toString() + "?")
+                        .setIcon(android.R.drawable.ic_dialog_alert)
+                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+
+                            public void onClick(DialogInterface dialog, int whichButton) {
+                                LauncherState state = StateHelper.getState(getApplicationContext());
+                                if (state.appTilesMap.containsKey(ad.name)) {
+                                    state.appTilesMap.remove(ad.name);
+                                    StateHelper.setState(state, getApplicationContext());
+                                }
+                                loadListView((GridView) findViewById(R.id.gridview));
+                            }
+                        })
+                        .setNegativeButton(android.R.string.no, null).show();
+                return true;
+            }
+        });*/
     }
 
     @Override
@@ -78,11 +113,21 @@ public class LauncherActivity extends Activity {
                 showApps();
             }
         });
-        loadGridView();
+        mListPopupWindow = new ListPopupWindow(LauncherActivity.this);
+        mListPopupWindow.setAnchorView(button);
+        mListPopupWindow.setContentWidth(300);
+        mListPopupWindow.getBackground().setAlpha(179); // Goes from 0-255 255 * .7 = 178.5
+        loadListView(mListPopupWindow);
+
     }
 
     public void showApps(){
-        Intent i = new Intent(this, AppSelectionActivity.class);
-        startActivity(i);
+        mListPopupWindow.show();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        if(ACTION_RELOAD_LAUNCHER_LIST.equals(intent.getAction())) {
+        }
     }
 }

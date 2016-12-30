@@ -2,9 +2,7 @@ package org.phuff.featurephone;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -12,12 +10,9 @@ import java.util.Map;
  */
 public class LauncherState {
     @JsonProperty
-    List<AppTile> appTiles;
-    @JsonProperty
-    Map<String, Boolean> appTilesMap;
+    Map<String, AppTile> appTilesMap;
 
     LauncherState() {
-        appTiles = new ArrayList<AppTile>();
-        appTilesMap = new HashMap<String, Boolean>();
+        appTilesMap = new HashMap<String, AppTile>();
     }
 }
